@@ -21,3 +21,7 @@ chroma.sqlite3
 milvus.db
 .milvus.db.lock
 /.umbrella-gateway-sessions
+
+# Spec-kit security: prevent credential leakage
+.github/prompts/.env
+.specify/memory/

@@ -1,0 +1,34 @@
+// filepath: src/myDbAssistant/ui/config/flask.json
+{
+  "description": "Flask Web UI Configuration",
+  "host": "0.0.0.0",
+  "port": 8084,
+  "debug": true,
+  "secret_key": "change-this-secret-key-in-production",
+  "ui_settings": {
+    "title": "MyDBAssistant",
+    "subtitle": "Ask questions about your database in natural language",
+    "logo_text": "MyDBAssistant",
+    "theme": "default",
+    "allow_llm_to_see_data": true,
+    "auto_train": true,
+    "show_training_data": true
+  },
+  "security": {
+    "cors_enabled": false,
+    "allowed_origins": ["http://localhost:8084"],
+    "rate_limiting": {
+      "enabled": false,
+      "requests_per_minute": 60
+    }
+  },
+  "notes": [
+    "host: '0.0.0.0' = accessible from network, '127.0.0.1' = localhost only",
+    "port: Flask server port (change if 8084 is in use)",
+    "debug: Enable debug mode (disable in production)",
+    "secret_key: Change this in production!",
+    "allow_llm_to_see_data: Allow LLM to see actual data for better results",
+    "auto_train: Automatically save successful Q&A pairs",
+    "show_training_data: Display training data in UI"
+  ]
+}

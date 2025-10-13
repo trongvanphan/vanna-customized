@@ -3,6 +3,12 @@
 ## Project Overview
 Vanna is an MIT-licensed RAG (Retrieval-Augmented Generation) framework for SQL generation. It uses LLMs and vector databases to convert natural language questions into SQL queries.
 
+**Repository Structure:**
+- `src/vanna/` - Core Vanna framework (multiple inheritance architecture)
+- `src/myDbAssistant/` - Custom implementation with Umbrella Gateway + multi-database support (Oracle, PostgreSQL, MySQL, SQL Server)
+- `tests/` - Framework tests
+- `training_data/` - Example training datasets
+
 ## Core Architecture
 
 ### Multiple Inheritance Pattern
@@ -594,3 +600,384 @@ Verify:
 - ✅ Query execution successful  
 - ✅ Plotly visualization renders
 - ✅ No import errors
+
+## myDbAssistant Custom Implementation
+
+### Overview
+`src/myDbAssistant/` is a production-ready example using:
+- **Umbrella Gateway** - GitHub Copilot API access via VS Code extension (custom LLM)
+- **Multi-Database Support** - Oracle, PostgreSQL, MySQL, Microsoft SQL Server
+- **JSON Configuration** - Flexible, file-based configuration system
+- **Training Control** - Manual vs automatic training modes
+
+**Key difference from core Vanna:** Implements custom LLM provider (Umbrella Gateway) instead of standard providers like OpenAI/Anthropic, with flexible database configuration.
+
+### Directory Structure
+```
+src/myDbAssistant/
+├── ui/                          # JSON-based configuration system
+│   ├── config/
+│   │   ├── llm.json            # Umbrella Gateway settings
+│   │   ├── database.json       # Oracle connection params
+│   │   ├── flask.json          # Web UI settings
+│   │   ├── chromadb.json       # Vector store settings
+│   │   └── training.json       # Training control (NEW)
+│   ├── config_loader.py        # Configuration utilities
+│   └── __init__.py             # Exports: get_vanna_config, should_auto_train, train_from_files
+│
+├── trainingMyDb/               # Training data (separate from config)
+│   ├── ddl/                    # SQL schema files
+│   ├── documentation/          # Business rules (Markdown)
+│   └── trainingpairs/          # Q&A examples (JSON)
+│
+├── quick_start_flask_ui.py    # Main application (uses JSON config)
+├── quick_start_flask.py       # Alternative (uses config.py)
+├── config.py                   # Python-based config (legacy)
+└── test_ui_config.py          # Configuration test suite
+```
+
+### Custom LLM Implementation Pattern
+**File:** `quick_start_flask_ui.py`
+
+```python
+from vanna.base import VannaBase
+from vanna.chromadb import ChromaDB_VectorStore
+
+class MyCustomLLM(VannaBase):
+    def __init__(self, config_dict=None):
+        VannaBase.__init__(self, config=config_dict)
+        # Umbrella Gateway-specific initialization
+        self.api_endpoint = config_dict.get('endpoint', 'http://localhost:8765')
+        self.session_id = f"vanna_session_{int(time.time())}"
+    
+    def submit_prompt(self, prompt, **kwargs) -> str:
+        # POST to Umbrella Gateway /chat endpoint
+        payload = {
+            "messages": prompt,
+            "sessionId": self.session_id,
+            "model": self.model,
+            "stream": False
+        }
+        # Return response text
+
+# Multiple inheritance: VectorStore FIRST, then LLM
+class MyVanna(ChromaDB_VectorStore, MyCustomLLM):
+    def __init__(self, config_dict=None):
+        ChromaDB_VectorStore.__init__(self, config=config_dict)
+        MyCustomLLM.__init__(self, config_dict=config_dict)
+```
+
+**Critical:** Session IDs allow Umbrella Gateway to maintain conversation context.
+
+### JSON Configuration System
+
+**Loading configurations:**
+```python
+from ui import (
+    get_vanna_config,              # LLM + ChromaDB merged config
+    get_database_connection_params, # Database credentials
+    get_flask_params,              # Flask server settings
+    should_auto_train,             # Check training config
+    train_from_files,              # Load training data
+)
+
+# Initialize with JSON config
+vn = MyVanna(config_dict=get_vanna_config())
+
+# Connect using JSON config
+db_params = get_database_connection_params()
+vn.connect_to_oracle(
+    dsn=f"{db_params['host']}:{db_params['port']}/{db_params['database']}",
+    user=db_params['user'],
+    password=db_params['password']
+)
+```
+
+**Programmatic updates:**
+```python
+from ui import ConfigLoader
+
+loader = ConfigLoader()
+loader.update_llm_config({'model': 'copilot/gpt-5'})
+loader.update_training_config({'auto_train_on_startup': True})
+```
+
+### Multi-Database Support
+
+myDbAssistant supports multiple database types through JSON configuration. Simply change the `type` field in `ui/config/database.json`:
+
+**Supported Databases:**
+- **Oracle** (`type: "oracle"`) - Default port 1521
+- **PostgreSQL** (`type: "postgres"`) - Default port 5432
+- **MySQL** (`type: "mysql"`) - Default port 3306
+- **Microsoft SQL Server** (`type: "mssql"` or `"sqlserver"`) - Default port 1433
+
+**Example configurations:**
+
+```json
+// Oracle
+{
+  "type": "oracle",
+  "host": "localhost",
+  "port": 1521,
+  "database": "XEPDB1",
+  "schema": "hr",
+  "user": "hr",
+  "password": "hr123"
+}
+
+// PostgreSQL
+{
+  "type": "postgres",
+  "host": "localhost",
+  "port": 5432,
+  "database": "mydb",
+  "schema": "public",
+  "user": "postgres",
+  "password": "postgres"
+}
+
+// MySQL
+{
+  "type": "mysql",
+  "host": "localhost",
+  "port": 3306,
+  "database": "mydb",
+  "schema": "mydb",
+  "user": "root",
+  "password": "root"
+}
+
+// Microsoft SQL Server
+{
+  "type": "mssql",
+  "host": "localhost",
+  "port": 1433,
+  "database": "mydb",
+  "schema": "dbo",
+  "user": "sa",
+  "password": "YourStrong!Passw0rd"
+}
+```
+
+**Connection handling in `quick_start_flask_ui.py`:**
+```python
+if db_params['type'] == 'oracle':
+    vn.connect_to_oracle(dsn=f"{host}:{port}/{database}", user=user, password=password)
+elif db_params['type'] in ('postgres', 'postgresql'):
+    vn.connect_to_postgres(host=host, port=port, dbname=database, user=user, password=password)
+elif db_params['type'] == 'mysql':
+    vn.connect_to_mysql(host=host, port=port, database=database, user=user, password=password)
+elif db_params['type'] in ('mssql', 'sqlserver'):
+    vn.connect_to_mssql(server=host, port=port, database=database, user=user, password=password)
+```
+
+**Required drivers:**
+```bash
+pip install 'vanna[oracle]'    # For Oracle
+pip install 'vanna[postgres]'  # For PostgreSQL
+pip install 'vanna[mysql]'     # For MySQL
+pip install 'vanna[mssql]'     # For SQL Server
+```
+
+**Note:** Use quotes around `'vanna[...]'` to avoid shell interpretation issues (especially in zsh).
+
+### Training Control System (NEW)
+
+**Problem:** Original implementation always trained on startup → slow restarts, duplicate training.
+
+**Solution:** `ui/config/training.json` controls when/how training happens:
+
+```json
+{
+  "auto_train_on_startup": false,  // Manual control by default
+  "training_data_path": "../trainingMyDb",
+  "training_settings": {
+    "load_ddl": true,
+    "load_documentation": true,
+    "load_training_pairs": true,
+    "skip_if_exists": true,         // Skip if already trained
+    "verbose": true
+  }
+}
+```
+
+**Usage patterns:**
+```python
+# Check if auto-training enabled
+if should_auto_train():
+    stats = train_from_files(vn, verbose=True)
+    print(f"Loaded {stats['pairs_loaded']} training pairs")
+else:
+    print("⏸️ Auto-training disabled - train manually when needed")
+
+# Manual training anytime
+stats = train_from_files(vn)  # Returns {ddl_loaded, docs_loaded, pairs_loaded, errors}
+```
+
+**Why disable auto-training:**
+- Faster startup (no training delay)
+- Control when training happens
+- Avoid re-training on every restart
+- Better for production (train once, reuse ChromaDB)
+
+### Settings UI (NEW!)
+
+**Location:** `src/myDbAssistant/config_ui.py`
+
+A comprehensive web-based configuration interface accessible at `http://localhost:8084/settings`.
+
+**Features:**
+- **🤖 LLM Settings** - Configure Umbrella Gateway (API key, endpoint, model, temperature, max tokens, timeout)
+- **🗄️ Database Settings** - Manage database connections (type, host, port, credentials) with connection testing
+- **📊 ChromaDB Settings** - Adjust vector store retrieval parameters (SQL/DDL/documentation result counts)
+- **🌐 Flask Settings** - Configure web server (host, port, debug mode, UI title/subtitle, data visibility)
+- **📚 Training Settings** - Control training data loading (auto-train toggle, data paths, load options)
+
+**Key Components:**
+
+1. **API Endpoints** (in `config_ui.py`):
+   - `GET /api/v0/get_config` - Fetch all current configurations
+   - `POST /api/v0/update_llm_config` - Update LLM settings
+   - `POST /api/v0/update_database_config` - Update database settings
+   - `POST /api/v0/update_chromadb_config` - Update ChromaDB settings
+   - `POST /api/v0/update_flask_config` - Update Flask settings
+   - `POST /api/v0/update_training_config` - Update training settings
+   - `POST /api/v0/test_database_connection` - Test database connectivity
+   - `POST /api/v0/test_llm_connection` - Test LLM endpoint health
+
+2. **ConfigLoader Integration** (uses existing `ui/config_loader.py`):
+   ```python
+   from ui import ConfigLoader
+   loader = ConfigLoader()
+   loader.update_llm_config({'model': 'copilot/gpt-5'})
+   loader.update_database_config({'type': 'postgres', 'port': 5432})
+   ```
+
+3. **Integration in Flask App** (`quick_start_flask_ui.py`):
+   ```python
+   from config_ui import ConfigUI
+   config_ui = ConfigUI(vanna_flask.flask_app, vn)
+   # Adds /settings route and all API endpoints
+   ```
+
+**Usage Workflow:**
+1. Launch app: `python3 quick_start_flask_ui.py`
+2. Navigate to: `http://localhost:8084/settings`
+3. Configure settings through modern UI with validation
+4. Test connections with built-in test buttons
+5. Save changes (persists to JSON files in `ui/config/`)
+6. Restart server if needed (Flask/Database changes)
+
+**UI Features:**
+- Tab-based navigation for different config sections
+- Real-time validation and error messages
+- Test connection buttons for LLM and database
+- Auto-fills default ports based on database type
+- Visual feedback (success/error alerts)
+- Responsive design with modern styling
+
+**Security Notes:**
+- No built-in authentication (add for production)
+- Passwords stored in JSON (use env vars for production)
+- Settings UI saves directly to config files
+- Already in .gitignore to prevent credential commits
+
+See `docs/settings-ui-guide.md` for comprehensive usage guide.
+
+### Umbrella Gateway Integration
+
+**Prerequisites:**
+1. VS Code with Umbrella Gateway extension installed
+2. GitHub Copilot subscription
+3. Server started: `Cmd+Shift+P` → "Umbrella Gateway: Start Server"
+
+**Getting auth token:**
+```bash
+cat .vscode/settings.json | grep authToken
+# Copy token to ui/config/llm.json
+```
+
+**Available models:**
+- `copilot/gpt-5-mini` (fast, cheap)
+- `copilot/gpt-5` (balanced)
+- `copilot/claude-sonnet-4` (powerful)
+- `copilot/o1-mini` (reasoning)
+
+**Error handling:**
+- 401 → Check auth token in `llm.json`
+- 403 → Run "Grant Access" in VS Code
+- 503 → Try different model
+- Connection error → Verify server started
+
+### Testing the Custom Implementation
+
+**Run test suite:**
+```bash
+cd src/myDbAssistant
+python test_ui_config.py
+```
+
+**Expected: 7/7 tests passing**
+- Imports (verify all modules load)
+- Config Files (validate JSON syntax)
+- Data Files (check training data exists)
+- ConfigLoader (test config loading)
+- DataLoader (test data loading)
+- Helper Functions (test get_vanna_config, etc.)
+- Training Control (test should_auto_train, train_from_files)
+
+**Integration test:**
+```bash
+python quick_start_flask_ui.py
+# Should launch Flask on http://localhost:8084
+```
+
+### Development Workflow (myDbAssistant)
+
+1. **Update configuration** - Edit JSON files in `ui/config/`
+2. **Add training data** - Add files to `trainingMyDb/{ddl,documentation,trainingpairs}/`
+3. **Test changes** - Run `python test_ui_config.py`
+4. **Run application** - `python quick_start_flask_ui.py`
+
+**No code changes needed** for configuration updates - just edit JSON files.
+
+### Key Patterns to Follow
+
+**1. Separate UI config from training data:**
+- `ui/config/` → UI-related configuration
+- `trainingMyDb/` → Training data (DDL, docs, Q&A)
+
+**2. Training data organization:**
+- DDL: `.sql` files in `trainingMyDb/ddl/`
+- Docs: `.md` files in `trainingMyDb/documentation/`
+- Pairs: `.json` files in `trainingMyDb/trainingpairs/`
+- All files automatically loaded (glob pattern)
+
+**3. Configuration precedence:**
+- JSON files → Primary configuration
+- Environment variables → Override secrets (production)
+- `config.py` → Legacy support (backward compatible)
+
+**4. Error messages must guide users:**
+```python
+except requests.exceptions.ConnectionError:
+    print(f"❌ Connection Error: Cannot reach Umbrella Gateway")
+    print(f"   Make sure:")
+    print(f"   1. VS Code is open with the workspace")
+    print(f"   2. Umbrella Gateway extension is installed")
+    print(f"   3. Server is started (Cmd+Shift+P -> 'Umbrella Gateway: Start Server')")
+```
+
+### Adding New Custom LLM Providers
+
+To add another custom LLM (like Umbrella Gateway):
+
+1. Create LLM class inheriting from `VannaBase`
+2. Implement required methods: `submit_prompt()`, `system_message()`, `user_message()`, `assistant_message()`
+3. Add provider-specific config to `ui/config/llm.json`
+4. Update `config_loader.py` if needed
+5. Follow multiple inheritance pattern: `class MyVanna(VectorStore, CustomLLM)`
+
+**See `quick_start_flask_ui.py` lines 28-107** for complete example.
+

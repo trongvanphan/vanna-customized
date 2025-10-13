@@ -1,0 +1,28 @@
+{
+  "description": "Training Configuration - Control when and how training happens",
+  "auto_train_on_startup": true,
+  "training_data_path": "../trainingMyDb",
+  "training_settings": {
+    "load_ddl": true,
+    "load_documentation": true,
+    "load_training_pairs": true,
+    "skip_if_exists": true,
+    "verbose": true
+  },
+  "retraining": {
+    "enabled": false,
+    "clear_existing_data": false,
+    "backup_before_retrain": true
+  },
+  "notes": [
+    "auto_train_on_startup: If true, automatically train on app startup",
+    "training_data_path: Relative path to training data directory (ddl, documentation, trainingpairs)",
+    "load_ddl: Load DDL scripts from ddl/ folder",
+    "load_documentation: Load business rules from documentation/ folder",
+    "load_training_pairs: Load Q&A examples from trainingpairs/ folder",
+    "skip_if_exists: Skip training if data already exists in ChromaDB",
+    "verbose: Print detailed training progress",
+    "To train manually: Use vn.train() in code or call train_from_files() function",
+    "To retrain: Set retraining.enabled=true and clear_existing_data=true"
+  ]
+}

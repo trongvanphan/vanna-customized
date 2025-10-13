@@ -260,6 +260,32 @@ Fine-Tuning
 ## Extending Vanna
 Vanna is designed to connect to any database, LLM, and vector database. There's a [VannaBase](https://github.com/vanna-ai/vanna/blob/main/src/vanna/base/base.py) abstract base class that defines some basic functionality. The package provides implementations for use with OpenAI and ChromaDB. You can easily extend Vanna to use your own LLM or vector database. See the [documentation](https://vanna.ai/docs/) for more details.
 
+## 🌱 Spec-Driven Development with Spec-Kit
+
+This project supports [Spec-Kit](https://github.com/github/spec-kit) for structured, AI-assisted development. Spec-Kit enables you to build features by defining specifications first, then generating implementations through GitHub Copilot.
+
+### Quick Start with Spec-Kit
+
+```bash
+# Spec-Kit is already initialized in this project!
+# Use these slash commands in GitHub Copilot:
+
+/speckit.constitution  # Define project principles
+/speckit.specify       # Describe what you want to build
+/speckit.plan          # Create technical plan
+/speckit.tasks         # Generate task list
+/speckit.implement     # Build the feature
+```
+
+**📖 Full guide:** See [SPEC-KIT-GUIDE.md](SPEC-KIT-GUIDE.md) for comprehensive documentation on using Spec-Kit with Vanna.
+
+### Benefits for Vanna Development
+
+- **Structured approach** to adding new LLM providers and vector stores
+- **Consistent architecture** aligned with Vanna's multiple inheritance pattern
+- **Quality validation** through automated checklists
+- **Better collaboration** with executable specifications
+
 ## Vanna in 100 Seconds
 
 https://github.com/vanna-ai/vanna/assets/7146154/eb90ee1e-aa05-4740-891a-4fc10e611cab

@@ -1,0 +1,26 @@
+{
+  "description": "LLM Configuration - Copilot Socket Core (VSCode Extension)",
+  "api_type": "copilot-socket-core",
+  "api_key": "",
+  "endpoint": "http://localhost:8765",
+  "model": "copilot/gpt-4o",
+  "temperature": 0.7,
+  "max_tokens": 4096,
+  "max_tool_rounds": 5,
+  "timeout": 60,
+  "available_models": [
+    "copilot/gpt-4o",
+    "copilot/claude-sonnet-4",
+    "copilot/gpt-3.5-turbo"
+  ],
+  "notes": [
+    "api_key: NOT REQUIRED for Copilot Socket Core (runs on localhost)",
+    "endpoint: Copilot Socket Core server URL (default: http://localhost:8765)",
+    "model: Supported models - gpt-4o, claude-sonnet-4, gpt-3.5-turbo",
+    "temperature: 0.0 = deterministic, 1.0 = creative (0.7 recommended for SQL)",
+    "max_tool_rounds: Maximum tool calling iterations (default: 5, max: 200)",
+    "Start server: VSCode Command -> 'Copilot Socket: Start Server'",
+    "Grant access: VSCode Command -> 'Copilot Socket: Grant Access'",
+    "Check health: curl http://localhost:8765/health"
+  ]
+}

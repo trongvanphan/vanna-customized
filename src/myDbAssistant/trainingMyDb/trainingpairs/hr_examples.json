@@ -1,0 +1,23 @@
+[
+  {
+    "question": "Who are the highest paid employees?",
+    "sql": "SELECT first_name, last_name, salary FROM hr.employees ORDER BY salary DESC FETCH FIRST 10 ROWS ONLY",
+    "category": "salary",
+    "difficulty": "easy",
+    "description": "Retrieves top 10 employees by salary"
+  },
+  {
+    "question": "How many employees are in each department?",
+    "sql": "SELECT d.department_name, COUNT(e.employee_id) as employee_count FROM hr.departments d LEFT JOIN hr.employees e ON d.department_id = e.department_id GROUP BY d.department_name ORDER BY employee_count DESC",
+    "category": "aggregation",
+    "difficulty": "medium",
+    "description": "Counts employees per department including departments with zero employees"
+  },
+  {
+    "question": "What is the average salary by job title?",
+    "sql": "SELECT j.job_title, AVG(e.salary) as avg_salary FROM hr.jobs j JOIN hr.employees e ON j.job_id = e.job_id GROUP BY j.job_title ORDER BY avg_salary DESC",
+    "category": "aggregation",
+    "difficulty": "medium",
+    "description": "Calculates average salary for each job title"
+  }
+]

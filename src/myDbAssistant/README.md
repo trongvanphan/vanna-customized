@@ -1,22 +1,26 @@
 # myDbAssistant - Vanna AI Database Assistant
 
-Natural language SQL query generator using Vanna AI with Umbrella Gateway (GitHub Copilot models) and Oracle Database.
+Natural language SQL query generator using Vanna AI with Copilot Socket Core (VSCode Extension) and multiple database support.
 
 ## 🎯 Features
 
 - **Natural Language to SQL**: Ask questions in plain English, get SQL queries
-- **Oracle Database Support**: Pre-configured for Oracle HR schema
+- **Multi-Database Support**: Oracle, PostgreSQL, MySQL, Microsoft SQL Server
 - **ChromaDB Vector Store**: Local file-based vector storage (no external database needed)
-- **Umbrella Gateway Integration**: Uses GitHub Copilot models via VS Code extension
+- **Copilot Socket Core Integration**: Uses GitHub Copilot models via VSCode extension
+- **Tool Calling Support**: Auto tool execution for enhanced query generation
 - **Flask Web UI**: Clean, modern interface for asking questions and viewing results
-- **Auto-training**: Learns from your questions and SQL pairs
+- **JSON Configuration**: Flexible, easy-to-edit configuration system
+- **Training Control**: Manual or automatic training modes
+- **Auto-learning**: Learns from your questions and SQL pairs
+- **Settings UI**: Web-based configuration management
 
 ## 📋 Prerequisites
 
 1. **Python 3.11+**
-2. **Oracle Database** running with HR schema (or your own database)
-3. **VS Code** with [Umbrella Gateway extension](https://github.com/vanna-ai/umbrella-gateway) installed
-4. **GitHub Copilot** subscription (required for Umbrella Gateway)
+2. **Database** - One of: Oracle, PostgreSQL, MySQL, or Microsoft SQL Server
+3. **VS Code** with [Copilot Socket Core extension](https://github.com/CopilotGateway/CopilotGateway-Core) installed
+4. **GitHub Copilot** subscription (required for Copilot Socket Core)
 
 ## 🚀 Quick Start
 
@@ -27,54 +31,105 @@ Natural language SQL query generator using Vanna AI with Umbrella Gateway (GitHu
 pip install -r requirements.txt
 ```
 
-### 2. Configure Umbrella Gateway
+### 2. Configure Copilot Socket Core
 
 1. Open VS Code with this workspace
-2. Install the Umbrella Gateway extension
+2. Install the Copilot Socket Core extension
 3. Press `Cmd+Shift+P` (Mac) or `Ctrl+Shift+P` (Windows/Linux)
-4. Run: `Umbrella Gateway: Start Server`
-5. Run: `Umbrella Gateway: Grant Access` (if prompted)
-6. The server will start on `http://localhost:8765`
+4. Run: `Copilot Socket: Start Server`
+5. Run: `Copilot Socket: Grant Access` (if prompted)
+6. The server will start on `http://localhost:8080`
+7. Verify health: `curl http://localhost:8080/health`
 
 ### 3. Update Configuration
 
-Edit `config.py` to match your setup:
-
-```python
-# LLM Configuration (Umbrella Gateway)
-LLM_CONFIG = {
-    'api_key': 'sk-abcdef123456',  # Your actual token
-    'endpoint': 'http://localhost:8765',
-    'model': 'copilot/gpt-5-mini',  # Or another available model
-    'temperature': 0.7
-}
-
-# Oracle Database Configuration
-DATA_DB_CONFIG = {
-    'host': 'localhost',
-    'port': 1521,
-    'database': 'XEPDB1',  # Your SID or service name
-    'schema': 'hr',         # Your schema
-    'user': 'hr',           # Your username
-    'password': 'hr123'     # Your password
+Edit `ui/config/database.json` to match your database setup:
+  "database": "XEPDB1",
+  "schema": "hr",
+  "user": "hr",
+  "password": "hr123"
 }
 ```
 
-**Finding your auth token:**
+**For PostgreSQL:**
+```json
+{
+  "type": "postgres",
+  "host": "localhost",
+  "port": 5432,
+  "database": "mydb",
+  "schema": "public",
+  "user": "postgres",
+  "password": "postgres"
+}
+```
+
+**For MySQL:**
+```json
+{
+  "type": "mysql",
+  "host": "localhost",
+  "port": 3306,
+  "database": "mydb",
+  "schema": "mydb",
+  "user": "root",
+  "password": "root"
+}
+```
+
+**For Microsoft SQL Server:**
+```json
+{
+  "type": "mssql",
+  "host": "localhost",
+  "port": 1433,
+  "database": "mydb",
+  "schema": "dbo",
+  "user": "sa",
+  "password": "YourStrong!Passw0rd"
+}
+```
+
+**Required database drivers:**
 ```bash
-# Check your VS Code settings
-cat ../.vscode/settings.json | grep authToken
+pip install 'vanna[oracle]'    # For Oracle (note the quotes!)
+pip install 'vanna[postgres]'  # For PostgreSQL  
+pip install 'vanna[mysql]'     # For MySQL
+pip install 'vanna[mssql]'     # For SQL Server
 ```
+
+**Note for zsh users (macOS default):** The quotes are **required** because zsh treats `[]` as special characters.
+
+Copilot Socket Core configuration is in `ui/config/llm.json`:
+
+```json
+{
+  "api_key": "",
+  "endpoint": "http://localhost:8080",
+  "model": "copilot/gpt-4o",
+  "max_tool_rounds": 5
+}
+```
+
+**No API key required** for localhost. The extension handles authentication via VSCode.
+
+See `docs/database-examples.md` for complete configuration examples.
 
 ### 4. Test Connections
 
-Before running the main application, verify all connections:
+Before running the main application, verify Copilot Socket Core is running:
 
 ```bash
-python test_umbrella_connection.py
+# Check health
+curl http://localhost:8080/health
+
+# Check available models
+curl http://localhost:8080/models
 ```
 
 Expected output:
+```
+{"status": "ok"}
 ```
 ✅ PASS - Health
 ✅ PASS - Auth
@@ -89,10 +144,12 @@ Expected output:
 ### 5. Run the Application
 
 ```bash
-python quick_start_flask.py
+python3 quick_start_flask_ui.py
 ```
 
 The Flask UI will launch at: **http://localhost:8084**
+
+**🎛️ Settings Page:** Access **http://localhost:8084/settings** to configure all settings through the UI!
 
 ## 📖 Usage
 
@@ -107,6 +164,42 @@ The Flask UI will launch at: **http://localhost:8084**
 4. Review the generated SQL
 5. Click **Run SQL** to execute and see results
 6. View data visualizations (if applicable)
+
+### Settings UI (NEW!)
+
+Access **http://localhost:8084/settings** to manage all configurations through a modern UI:
+
+**🤖 LLM Settings**
+- API Key / Auth Token
+- Endpoint URL
+- Model selection (GPT-4, GPT-5, Claude, etc.)
+- Temperature, max tokens, timeout
+- Test connection button
+
+**🗄️ Database Settings**
+- Database type (Oracle, PostgreSQL, MySQL, SQL Server)
+- Host, port, database name
+- Schema, username, password
+- Test connection button
+
+**📊 ChromaDB Settings**
+- Storage path
+- Number of results for SQL/DDL/Documentation retrieval
+
+**🌐 Flask Settings**
+- Host and port configuration
+- Debug mode toggle
+- UI title and subtitle
+- LLM data visibility settings
+
+**📚 Training Settings**
+- Auto-train on startup toggle
+- Training data path
+- Load DDL/Documentation/Training pairs toggles
+- Skip if exists option
+- Verbose logging
+
+All settings are saved to JSON files in `ui/config/` and can be edited through the UI or manually.
 
 ### Programmatic Usage
 
@@ -201,77 +294,174 @@ Training data is stored persistently in ChromaDB and reused across sessions.
 
 ## 🐛 Troubleshooting
 
-### "Cannot connect to Umbrella Gateway"
+### "Cannot connect to Copilot Socket Core"
 - **Solution**: Start the server in VS Code:
-  - `Cmd+Shift+P` → `Umbrella Gateway: Start Server`
-  - Wait for "Server started on port 8765" notification
+  - `Cmd+Shift+P` → `Copilot Socket: Start Server`
+  - Wait for "Server started on port 8080" notification
+  - Check health: `curl http://localhost:8080/health`
 
-### "401 Unauthorized"
-- **Solution**: Update auth token in `config.py`:
+### "Copilot not available"
+- **Solution**: Grant access to Copilot:
+  - `Cmd+Shift+P` → `Copilot Socket: Grant Access`
+  - Verify GitHub Copilot subscription is active
+  - Restart VSCode if needed
+
+### "Model not available"
+- **Solution**: Check available models:
   ```bash
-  cat ../.vscode/settings.json | grep authToken
+  curl http://localhost:8080/models
   ```
-  Copy the token value to `LLM_CONFIG['api_key']`
+  Use one of: `copilot/gpt-4o`, `copilot/claude-sonnet-4`, `copilot/gpt-3.5-turbo`
 
-### "403 Forbidden"
-- **Solution**: Grant access to the extension:
-  - `Cmd+Shift+P` → `Umbrella Gateway: Grant Access`
-  - Restart the server
-
-### "Cannot connect to Oracle"
+### "Cannot connect to database"
 - **Solutions**:
-  - Verify Oracle is running: `lsnrctl status`
-  - Check credentials in `config.py`
-  - Test connection: `sqlplus hr/hr123@localhost:1521/XEPDB1`
+  - Verify database is running
+  - Check credentials in `ui/config/database.json`
+  - Test connection manually:
+    - Oracle: `sqlplus hr/hr123@localhost:1521/XEPDB1`
+    - PostgreSQL: `psql -h localhost -U postgres -d mydb`
+    - MySQL: `mysql -h localhost -u root -p`
 
 ### "ChromaDB errors"
 - **Solution**: Delete and recreate:
   ```bash
   rm -rf chromadb/
-  python quick_start_flask.py  # Will recreate automatically
+  python3 quick_start_flask_ui.py  # Will recreate automatically
   ```
 
 ### "Port 8084 already in use"
-- **Solution**: Change port in `config.py`:
-  ```python
-  FLASK_CONFIG = {'port': 8085, ...}
+- **Solution**: Change port in `ui/config/flask.json`:
+  ```json
+  {"port": 8085}
   ```
+  Or via Settings UI: http://localhost:8084/settings
 
 ## 🔒 Security Notes
+
+## 🧪 Testing the Migration
+
+We've migrated from Umbrella Gateway to Copilot Socket Core. Test your setup:
+
+### Quick Test (Recommended)
+
+```bash
+# Run comprehensive test suite (7 tests)
+python3 test_copilot_socket_core.py
+
+# Or quick smoke test
+python3 quick_test.py
+
+# Or compare both APIs (if you have Umbrella Gateway)
+python3 compare_apis.py
+```
+
+**Expected output:**
+```
+✅ All tests passed! (7/7)
+🎉 Copilot Socket Core is ready to use!
+```
+
+### Manual Testing
+
+```bash
+# Test health endpoint
+curl http://localhost:8080/health
+
+# Test available models
+curl http://localhost:8080/models
+
+# Test in Python
+python3
+>>> from quick_start_flask_ui import MyCustomLLM
+>>> from ui import get_vanna_config
+>>> llm = MyCustomLLM(config_dict=get_vanna_config())
+>>> llm._ensure_session()  # Creates session automatically
+>>> response = llm.submit_prompt([llm.user_message("Hello")])
+>>> print(response)
+```
+
+**Full testing guide:** See `TESTING_MIGRATION.md`
+
+## 📚 Documentation
+
+- **User Guide**: This README
+- **Testing Guide**: `TESTING_MIGRATION.md` - Complete test procedures
+- **Settings UI Guide**: `docs/settings-ui-guide.md` - Web UI configuration
+- **Migration Guide**: `docs/MIGRATION_TO_COPILOT_SOCKET_CORE.md` - API migration details
+- **Technical Spec**: `docs/TECHNICAL_SPEC.md` - Copilot Socket Core API spec
+- **Migration Summary**: `docs/LLM_API_MIGRATION_SUMMARY.md` - What changed
+
+## ⚙️ Configuration Files
+
+All configurations are in JSON format under `ui/config/`:
+
+- **`llm.json`**: Copilot Socket Core settings (API endpoint, model, tool calling)
+- **`database.json`**: Database connection details (Oracle, PostgreSQL, MySQL, SQL Server)
+- **`chromadb.json`**: Vector store settings (retrieval parameters)
+- **`flask.json`**: Web server settings (host, port, debug mode)
+- **`training.json`**: Training control (auto-train toggle, data paths)
+
+**Edit via:**
+1. **Web UI**: http://localhost:8084/settings (recommended)
+2. **Direct edit**: Modify JSON files manually
+3. **Programmatic**: Use `ConfigLoader` class
+
+## ⚠️ Production Considerations
 
 ⚠️ **Important**: This is a development setup. For production:
 
 1. **Never commit credentials**:
    - Use environment variables or secret management
-   - Add `config.py` to `.gitignore` (already done)
+   - `ui/config/` directory is in `.gitignore`
 
 2. **Disable Flask debug mode**:
-   ```python
-   FLASK_CONFIG = {'debug': False, ...}
+   ```json
+   // ui/config/flask.json
+   {"debug": false, ...}
    ```
 
 3. **Use HTTPS** for production deployments
 
 4. **Restrict network access**:
-   ```python
-   FLASK_CONFIG = {'host': '127.0.0.1', ...}  # Localhost only
+   ```json
+   // ui/config/flask.json
+   {"host": "127.0.0.1", ...}  // Localhost only
    ```
 
 5. **Sanitize user input** to prevent SQL injection
+
+6. **Secure Settings UI**:
+   - Add authentication (not included)
+   - Restrict access via firewall
+   - Use environment variables for sensitive data
 
 ## 📦 Dependencies
 
 ### Core
 - `vanna` - RAG framework for SQL generation
 - `chromadb` - Vector database
-- `oracledb` - Oracle database driver
+- `oracledb`, `psycopg2-binary`, `pymysql`, `pyodbc` - Database drivers
 - `Flask` - Web framework
 
 ### LLM & Utilities
-- `requests` - HTTP client for Umbrella Gateway
+- `requests` - HTTP client for Copilot Socket Core API
 - `pandas` - Data manipulation
 - `plotly` - Visualizations
 - `sqlparse` - SQL parsing
+
+**Install all:**
+```bash
+pip install -r requirements.txt
+
+# Or minimal install
+pip install vanna requests flask chromadb
+
+# Database-specific
+pip install 'vanna[oracle]'     # Oracle
+pip install 'vanna[postgres]'   # PostgreSQL
+pip install 'vanna[mysql]'      # MySQL
+pip install 'vanna[mssql]'      # SQL Server
+```
 
 See `requirements.txt` for complete list with versions.
 
@@ -285,12 +475,55 @@ This is a customized deployment of Vanna AI. For the main project:
 
 This implementation follows Vanna AI's MIT License.
 
-## 🆘 Support
+## 🆘 Support & Troubleshooting
+
+### Common Issues
+
+**1. "Cannot connect to server"**
+```bash
+# Check if Copilot Socket Core is running
+curl http://localhost:8080/health
+
+# Start server in VSCode
+# Cmd+Shift+P → "Copilot Socket: Start Server"
+```
+
+**2. "Empty response from LLM"**
+```bash
+# Check available models
+curl http://localhost:8080/models
+
+# Update model in ui/config/llm.json
+```
+
+**3. "Module not found: requests"**
+```bash
+pip install requests
+```
+
+**4. "Test failed"**
+```bash
+# Run comprehensive test
+python3 test_copilot_socket_core.py
+
+# See detailed troubleshooting
+cat TESTING_MIGRATION.md
+```
+
+### Documentation
+
+- **Testing Guide**: `TESTING_MIGRATION.md`
+- **Settings UI**: `docs/settings-ui-guide.md`
+- **Migration Guide**: `docs/MIGRATION_TO_COPILOT_SOCKET_CORE.md`
+- **API Spec**: `docs/TECHNICAL_SPEC.md`
+- **Copilot Instructions**: `.github/copilot-instructions.md` (parent directory)
+
+### Getting Help
 
 For issues with:
 - **Vanna framework**: https://github.com/vanna-ai/vanna/issues
-- **Umbrella Gateway**: https://github.com/vanna-ai/umbrella-gateway/issues
-- **This deployment**: Check `.github/copilot-instructions.md` in parent directory
+- **Copilot Socket Core**: https://github.com/CopilotGateway/CopilotGateway-Core/issues
+- **This deployment**: See troubleshooting section above
 
 ## 🎓 Learn More
 

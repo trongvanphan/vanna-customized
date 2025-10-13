@@ -1,0 +1,23 @@
+{
+  "description": "ChromaDB Vector Database Configuration",
+  "path": "./chromadb",
+  "collection_name": "vanna_training_data",
+  "embedding_settings": {
+    "model": "default",
+    "dimension": 384,
+    "distance_metric": "cosine"
+  },
+  "retrieval_settings": {
+    "n_results_sql": 10,
+    "n_results_ddl": 10,
+    "n_results_documentation": 10
+  },
+  "notes": [
+    "path: Local directory for ChromaDB storage (created automatically)",
+    "collection_name: Name of the ChromaDB collection for training data",
+    "ChromaDB is file-based, no external database server needed",
+    "Data persists across sessions in the specified path",
+    "To reset: delete the chromadb/ directory and restart",
+    "n_results_*: Number of similar items to retrieve for each category"
+  ]
+}

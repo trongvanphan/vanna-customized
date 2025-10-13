@@ -25,7 +25,7 @@ class MyCustomLLM(VannaBase):
         # Umbrella Gateway configuration
         self.api_key = config_dict.get('api_key')
         self.api_endpoint = config_dict.get('endpoint', 'http://localhost:8765')
-        self.model = config_dict.get('model', 'copilot/claude-sonnet-4')
+        self.model = config_dict.get('model', 'copilot/gpt-5-mini')
         self.temperature = config_dict.get('temperature', 0.7)
         self.session_id = f"vanna_session_{int(time.time())}"
         
