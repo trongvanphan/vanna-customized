@@ -22,8 +22,8 @@ class ConfigUI:
     def register_routes(self):
         """Register all configuration routes"""
         
-        # Get all configurations
-        self.app.route('/api/v0/get_config', methods=['GET'])(self.get_all_config)
+        # Get all configurations (use different route to avoid conflict with Flask base)
+        self.app.route('/api/v0/get_all_config', methods=['GET'])(self.get_all_config)
         
         # Update specific configurations
         self.app.route('/api/v0/update_llm_config', methods=['POST'])(self.update_llm_config)

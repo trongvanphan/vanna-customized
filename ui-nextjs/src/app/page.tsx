@@ -184,7 +184,7 @@ export default function Home() {
                 rel="noopener noreferrer"
                 className="underline hover:text-foreground"
               >
-                Db Assistant
+                vannai.ai
               </a>
             </p>
           </footer>

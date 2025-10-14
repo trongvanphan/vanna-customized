@@ -1118,6 +1118,130 @@ class VannaFlaskAPI:
                 }
             )
 
+        @self.flask_app.route("/api/v0/ask", methods=["POST"])
+        @self.requires_auth
+        def ask_question(user: any):
+            """
+            Ask a natural language question - complete workflow
+            Combines SQL generation, execution, and chart generation
+            ---
+            parameters:
+              - name: user
+                in: query
+              - name: body
+                in: body
+                required: true
+                schema:
+                  type: object
+                  properties:
+                    question:
+                      type: string
+                      required: true
+                    sessionId:
+                      type: string
+            responses:
+              200:
+                schema:
+                  type: object
+                  properties:
+                    sql:
+                      type: string
+                    data:
+                      type: array
+                    columns:
+                      type: array
+                    dtypes:
+                      type: object
+                    execution_time:
+                      type: number
+                    figure_id:
+                      type: string
+                    error:
+                      type: string
+            """
+            try:
+                data = flask.request.get_json()
+                if not data:
+                    return jsonify({"error": "No JSON data provided"}), 400
+                
+                question = data.get("question")
+                if not question:
+                    return jsonify({"error": "No question provided"}), 400
+
+                # Generate unique ID for this question
+                id = self.cache.generate_id(question=question)
+                
+                # Store question in cache
+                self.cache.set(id=id, field="question", value=question)
+
+                # Generate SQL
+                import time
+                start_time = time.time()
+                sql = vn.generate_sql(question=question, allow_llm_to_see_data=self.allow_llm_to_see_data)
+                
+                self.cache.set(id=id, field="sql", value=sql)
+
+                # Validate and execute SQL
+                if not vn.is_sql_valid(sql=sql):
+                    return jsonify({
+                        "sql": sql,
+                        "error": "Generated SQL is not valid",
+                        "execution_time": time.time() - start_time
+                    })
+
+                # Run SQL
+                try:
+                    df = vn.run_sql(sql=sql)
+                    execution_time = time.time() - start_time
+                    
+                    # Store results in cache
+                    self.cache.set(id=id, field="df", value=df)
+                    
+                    # Convert DataFrame to JSON-serializable format
+                    data_list = df.to_dict(orient='records') if df is not None and not df.empty else []
+                    columns = df.columns.tolist() if df is not None else []
+                    dtypes = {col: str(dtype) for col, dtype in df.dtypes.items()} if df is not None else {}
+                    
+                    # Generate Plotly figure if appropriate
+                    figure_id = None
+                    if df is not None and not df.empty and vn.should_generate_chart(df):
+                        try:
+                            plotly_code = vn.generate_plotly_code(
+                                question=question,
+                                sql=sql,
+                                df_metadata=f"Running df.dtypes gives:\n{df.dtypes}"
+                            )
+                            fig = vn.get_plotly_figure(plotly_code=plotly_code, df=df)
+                            if fig:
+                                figure_id = id
+                                self.cache.set(id=id, field="fig", value=fig)
+                        except Exception as e:
+                            # Chart generation failed, but query succeeded
+                            print(f"Chart generation failed: {e}")
+                    
+                    return jsonify({
+                        "sql": sql,
+                        "data": data_list,
+                        "columns": columns,
+                        "dtypes": dtypes,
+                        "execution_time": execution_time,
+                        "figure_id": figure_id
+                    })
+                    
+                except Exception as e:
+                    execution_time = time.time() - start_time
+                    error_msg = str(e)
+                    self.cache.set(id=id, field="error", value=error_msg)
+                    
+                    return jsonify({
+                        "sql": sql,
+                        "error": error_msg,
+                        "execution_time": execution_time
+                    })
+                    
+            except Exception as e:
+                return jsonify({"error": f"Unexpected error: {str(e)}"}), 500
+
         @self.flask_app.route("/api/v0/<path:catch_all>", methods=["GET", "POST"])
         def catch_all(catch_all):
             return jsonify(

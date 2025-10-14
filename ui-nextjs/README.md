@@ -2,6 +2,16 @@
 
 Modern Next.js web application for Vanna's myDbAssistant - natural language database queries with AI-powered SQL generation.
 
+## ✅ Latest Updates
+
+**v0.2.0 - API Integration Complete**
+- ✅ Fixed "The rest of the API is not ported yet" error
+- ✅ Added `/api/v0/ask` endpoint for complete Q&A workflow
+- ✅ Fixed CORS issues with Next.js proxy
+- ✅ Settings page fully functional
+- 📚 See [API-INTEGRATION.md](./API-INTEGRATION.md) for details
+- 🔧 See [CORS-FIX.md](./CORS-FIX.md) for CORS troubleshooting
+
 ## Prerequisites
 
 - **Node.js 18+** ([Download](https://nodejs.org/))
@@ -11,14 +21,47 @@ Modern Next.js web application for Vanna's myDbAssistant - natural language data
 
 ## Quick Start
 
-### 1. Install Dependencies
+### Option 1: Auto-start Script (Recommended)
 
 ```bash
 cd ui-nextjs
-npm install
+chmod +x start-dev.sh
+./start-dev.sh
 ```
 
-### 2. Configure Environment
+This script will:
+- Stop any existing Flask/Next.js processes
+- Start Flask backend on port 8084
+- Start Next.js frontend on port 3000
+- Verify both services are running
+
+### Option 2: Manual Start
+
+**Terminal 1 - Flask Backend:**
+```bash
+cd src/myDbAssistant
+python3 quick_start_flask_ui.py
+```
+
+Wait for:
+```
+✅ CORS enabled for Next.js frontend (localhost:3000)
+✅ Configuration UI enabled at /settings
+ * Running on http://0.0.0.0:8084
+```
+
+**Terminal 2 - Next.js Frontend:**
+```bash
+cd ui-nextjs
+npm install  # First time only
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+## Configuration
+
+### Environment Variables
 
 ```bash
 cp .env.local.example .env.local
@@ -29,21 +72,7 @@ Edit `.env.local`:
 NEXT_PUBLIC_FLASK_URL=http://localhost:8084
 ```
 
-### 3. Start Flask Backend
-
-In a separate terminal:
-```bash
-cd src/myDbAssistant
-python3 quick_start_flask_ui.py
-```
-
-### 4. Start Development Server
-
-```bash
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+**Note**: In development, Next.js uses a proxy to Flask (no CORS issues). The URL is mainly for production builds.
 
 ## Available Scripts
 

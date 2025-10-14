@@ -10,6 +10,7 @@ from vanna.chromadb import ChromaDB_VectorStore
 from vanna.base import VannaBase
 import requests
 import time
+from flask_cors import CORS
 
 # Import UI configuration loaders
 from ui import (
@@ -405,6 +406,12 @@ def main():
         show_training_data=True
     )
     
+    # Enable CORS for Next.js frontend (allow all routes)
+    CORS(vanna_flask.flask_app, 
+         origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+         supports_credentials=True)
+    print("✅ CORS enabled for Next.js frontend (localhost:3000)")
+    
     # IMPORTANT: Add configuration UI FIRST (before any custom routes)
     from config_ui import ConfigUI
     config_ui = ConfigUI(vanna_flask.flask_app, vn)
@@ -473,31 +480,6 @@ def main():
                 [class*="icon"] svg path[d*="M5 13l4 4L19 7"] {
                     display: none !important;
                 }
-                
-                /* Settings button - positioned below Open Debugger */
-                .settings-btn-inline {
-                    width: 100%;
-                    margin-top: 8px;
-                    padding: 8px 16px;
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    color: white;
-                    border: none;
-                    border-radius: 8px;
-                    font-weight: 600;
-                    font-size: 14px;
-                    cursor: pointer;
-                    transition: all 0.3s ease;
-                    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
-                    text-align: center;
-                    text-decoration: none;
-                    display: block;
-                }
-                
-                .settings-btn-inline:hover {
-                    background: linear-gradient(135deg, #5568d3 0%, #653a8a 100%);
-                    transform: translateY(-1px);
-                    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-                }
                 </style>
                 """
                 
@@ -522,28 +504,6 @@ def main():
                                 </svg>
                             `;
                             document.body.appendChild(settingsBtn);
-                        }
-                        
-                        // Add inline Settings button below Open Debugger button
-                        const debuggerBtn = Array.from(document.querySelectorAll('button')).find(btn => 
-                            btn.textContent.includes('Open Debugger')
-                        );
-                        
-                        if (debuggerBtn && !document.getElementById('settings-btn-inline')) {
-                            const settingsInlineBtn = document.createElement('a');
-                            settingsInlineBtn.id = 'settings-btn-inline';
-                            settingsInlineBtn.href = '/settings';
-                            settingsInlineBtn.className = 'settings-btn-inline';
-                            settingsInlineBtn.innerHTML = `
-                                <svg style="display: inline-block; width: 16px; height: 16px; margin-right: 8px; vertical-align: middle;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                                          d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                </svg>
-                                Settings
-                            `;
-                            debuggerBtn.parentElement.appendChild(settingsInlineBtn);
                         }
                         
                         // Replace page title
@@ -680,30 +640,6 @@ def main():
             display: none !important;
         }
         
-        /* Settings button - positioned below Open Debugger */
-        .settings-btn-inline {
-            width: 100%;
-            margin-top: 8px;
-            padding: 8px 16px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
-            text-align: center;
-            text-decoration: none;
-            display: block;
-        }
-        
-        .settings-btn-inline:hover {
-            background: linear-gradient(135deg, #5568d3 0%, #653a8a 100%);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-        }
         """
         return Response(css, mimetype='text/css')
     
@@ -812,10 +748,9 @@ def main():
         return Response(js, mimetype='application/javascript')
     
     print("✅ Custom branding and settings enabled")
-    print("   └─ Settings icon will appear in top-right corner")
-    print("   └─ Settings button will appear below 'Open Debugger' button")
+    print("   └─ Settings icon in top-right corner")
     print("   └─ All 'Vanna' text replaced with 'MyDBAssistant'")
-    print("   └─ Vanna logo and text removed")
+    print("   └─ Vanna logo removed")
     
     # Run Flask server
     vanna_flask.flask_app.run(

@@ -22,9 +22,13 @@ import type {
 
 /**
  * Base URL for Flask API
- * Uses environment variable or defaults to localhost:8084
+ * In development: use Next.js proxy (relative URLs) to avoid CORS
+ * In production: use direct Flask URL from environment variable
  */
-const FLASK_URL = process.env.NEXT_PUBLIC_FLASK_URL || 'http://localhost:8084';
+const FLASK_URL = 
+  typeof window !== 'undefined' && process.env.NODE_ENV === 'development'
+    ? '' // Use relative URLs in development (Next.js will proxy to Flask)
+    : process.env.NEXT_PUBLIC_FLASK_URL || 'http://localhost:8084';
 
 /**
  * Create Axios instance with default configuration
@@ -115,10 +119,10 @@ export async function getPlotlyFigure(figureId: string): Promise<PlotlyFigureRes
 
 /**
  * Get all configurations
- * GET /api/v0/get_config
+ * GET /api/v0/get_all_config
  */
 export async function getConfig(): Promise<AppConfig> {
-  const response = await client.get<AppConfig>('/api/v0/get_config');
+  const response = await client.get<AppConfig>('/api/v0/get_all_config');
   return response.data;
 }
 
