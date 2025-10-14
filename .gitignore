@@ -20,3 +20,5 @@ chroma.sqlite3
 .coverage.*
 milvus.db
 .milvus.db.lock
+/ui-nextjs/.next
+/ui-nextjs/node_modules
