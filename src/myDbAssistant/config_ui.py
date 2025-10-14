@@ -210,7 +210,7 @@ class ConfigUI:
                 
         except Exception as e:
             return jsonify({'success': False, 'message': f'Error loading training data: {str(e)}'}), 500
-    
+
     def settings_page(self):
         """Render settings page"""
         html = """
@@ -219,7 +219,7 @@ class ConfigUI:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vanna Settings</title>
+    <title>MyDBAssistant Settings</title>
     <style>
         * {
             margin: 0;
@@ -243,223 +243,26 @@ class ConfigUI:
             background: white;
             border-radius: 12px;
             padding: 30px;
-            margin-bottom: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            text-align: center;
         }
         
         .header h1 {
             color: #667eea;
             margin-bottom: 10px;
+            font-size: 32px;
         }
         
         .header p {
             color: #666;
+            font-size: 16px;
         }
-        
-        .tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-        
-        .tab {
-            background: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-            transition: all 0.3s;
-            color: #667eea;
-        }
-        
-        .tab:hover {
-            background: #667eea;
-            color: white;
-        }
-        
-        .tab.active {
-            background: #667eea;
-            color: white;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-        }
-        
-        .config-section {
-            display: none;
-            background: white;
-            border-radius: 12px;
-            padding: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        }
-        
-        .config-section.active {
-            display: block;
-        }
-        
-        .form-group {
-            margin-bottom: 20px;
-        }
-        
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            color: #333;
-            font-weight: 500;
-        }
-        
-        .form-group input,
-        .form-group select {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: border-color 0.3s;
-        }
-        
-        .form-group input:focus,
-        .form-group select:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        
-        .form-group small {
-            display: block;
-            margin-top: 5px;
-            color: #999;
-            font-size: 12px;
-        }
-        
-        .button-group {
-            display: flex;
-            gap: 10px;
-            margin-top: 30px;
-            flex-wrap: wrap;
-        }
-        
-        .btn {
-            padding: 12px 24px;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        .btn-primary {
-            background: #667eea;
-            color: white;
-        }
-        
-        .btn-primary:hover {
-            background: #5568d3;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-        }
-        
-        .btn-secondary {
-            background: #e0e0e0;
-            color: #333;
-        }
-        
-        .btn-secondary:hover {
-            background: #d0d0d0;
-        }
-        
-        .btn-test {
-            background: #48bb78;
-            color: white;
-        }
-        
-        .btn-test:hover {
-            background: #38a169;
-        }
-        
-        .alert {
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            display: none;
-        }
-        
-        .alert.show {
-            display: block;
-        }
-        
-        .alert-success {
-            background: #c6f6d5;
-            color: #22543d;
-            border: 1px solid #9ae6b4;
-        }
-        
-        .alert-error {
-            background: #fed7d7;
-            color: #742a2a;
-            border: 1px solid #fc8181;
-        }
-        
-        .alert-info {
-            background: #bee3f8;
-            color: #2c5282;
-            border: 1px solid #90cdf4;
-        }
-        
-        .row {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-        }
-        
-        .loading {
-            display: none;
-            text-align: center;
-            padding: 20px;
-        }
-        
-        .loading.show {
-            display: block;
-        }
-        
-        .spinner {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .back-link {
-            display: inline-block;
-            color: white;
-            text-decoration: none;
-            margin-bottom: 20px;
-            padding: 10px 20px;
-            background: rgba(255,255,255,0.2);
-            border-radius: 8px;
-            transition: background 0.3s;
-        }
-        
-        .back-link:hover {
-            background: rgba(255,255,255,0.3);
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <a href="/" class="back-link">← Back to Vanna</a>
+// ...existing code...
+        <a href="/" class="back-link">← Back to MyDBAssistant</a>
         
         <div class="header">
-            <h1>⚙️ Vanna Settings</h1>
+            <h1>⚙️ MyDBAssistant Settings</h1>
             <p>Manage all configuration settings from one place</p>
         </div>
         

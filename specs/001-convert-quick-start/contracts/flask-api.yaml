@@ -1,0 +1,537 @@
+openapi: 3.0.3
+info:
+  title: Vanna Flask Backend API
+  description: REST API for Vanna SQL generation and configuration management
+  version: 1.0.0
+  contact:
+    name: Vanna API Support
+    
+servers:
+  - url: http://localhost:8084
+    description: Local development server
+  - url: http://localhost:8084/api/v0
+    description: API v0 endpoint
+
+tags:
+  - name: Questions
+    description: Natural language question asking and SQL generation
+  - name: Configuration
+    description: System configuration management
+  - name: Connections
+    description: Connection testing endpoints
+  - name: Training
+    description: Training data management
+
+paths:
+  /api/v0/ask:
+    post:
+      tags:
+        - Questions
+      summary: Ask a natural language question
+      description: Submit a natural language question to generate and execute SQL
+      operationId: askQuestion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - question
+              properties:
+                question:
+                  type: string
+                  description: Natural language question
+                  example: "What are the top 10 customers by sales?"
+                sessionId:
+                  type: string
+                  description: Optional session ID for conversation context
+                  example: "vanna_session_1697123456"
+      responses:
+        '200':
+          description: Successful SQL generation and execution
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v0/generate_plotly_figure:
+    get:
+      tags:
+        - Questions
+      summary: Get Plotly chart for query result
+      description: Retrieve Plotly figure JSON for visualizing query results
+      operationId: getPlotlyFigure
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Figure ID from query response
+      responses:
+        '200':
+          description: Plotly figure data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlotlyFigureResponse'
+        '404':
+          description: Figure not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v0/get_config:
+    get:
+      tags:
+        - Configuration
+      summary: Get all configurations
+      description: Retrieve all system configurations (LLM, database, ChromaDB, Flask, training)
+      operationId: getAllConfig
+      responses:
+        '200':
+          description: All configurations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AllConfigResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v0/update_llm_config:
+    post:
+      tags:
+        - Configuration
+      summary: Update LLM configuration
+      description: Update Copilot Socket Core configuration
+      operationId: updateLLMConfig
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LLMConfig'
+      responses:
+        '200':
+          description: Configuration updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateConfigResponse'
+        '400':
+          description: Invalid configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v0/update_database_config:
+    post:
+      tags:
+        - Configuration
+      summary: Update database configuration
+      description: Update database connection settings
+      operationId: updateDatabaseConfig
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DatabaseConfig'
+      responses:
+        '200':
+          description: Configuration updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateConfigResponse'
+
+  /api/v0/update_chromadb_config:
+    post:
+      tags:
+        - Configuration
+      summary: Update ChromaDB configuration
+      description: Update vector store retrieval settings
+      operationId: updateChromaDBConfig
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChromaDBConfig'
+      responses:
+        '200':
+          description: Configuration updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateConfigResponse'
+
+  /api/v0/update_flask_config:
+    post:
+      tags:
+        - Configuration
+      summary: Update Flask configuration
+      description: Update Flask server and UI settings
+      operationId: updateFlaskConfig
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FlaskConfig'
+      responses:
+        '200':
+          description: Configuration updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateConfigResponse'
+
+  /api/v0/update_training_config:
+    post:
+      tags:
+        - Configuration
+      summary: Update training configuration
+      description: Update training data loading settings
+      operationId: updateTrainingConfig
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrainingConfig'
+      responses:
+        '200':
+          description: Configuration updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateConfigResponse'
+
+  /api/v0/test_database_connection:
+    post:
+      tags:
+        - Connections
+      summary: Test database connection
+      description: Validate database connection with provided credentials
+      operationId: testDatabaseConnection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DatabaseConfig'
+      responses:
+        '200':
+          description: Connection test result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectionTestResponse'
+
+  /api/v0/test_llm_connection:
+    post:
+      tags:
+        - Connections
+      summary: Test LLM connection
+      description: Validate Copilot Socket Core endpoint connectivity
+      operationId: testLLMConnection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                endpoint:
+                  type: string
+                  format: uri
+                api_key:
+                  type: string
+      responses:
+        '200':
+          description: Connection test result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectionTestResponse'
+
+  /api/v0/load_training_data:
+    post:
+      tags:
+        - Training
+      summary: Load training data
+      description: Load training data from configured directory (DDL, documentation, Q&A pairs)
+      operationId: loadTrainingData
+      responses:
+        '200':
+          description: Training data load result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrainingDataLoadResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    QueryResponse:
+      type: object
+      properties:
+        sql:
+          type: string
+          description: Generated SQL query
+          example: "SELECT customer_name, SUM(sales) as total FROM customers GROUP BY customer_name ORDER BY total DESC LIMIT 10"
+        data:
+          type: array
+          items:
+            type: object
+          description: Query result rows
+        columns:
+          type: array
+          items:
+            type: string
+          description: Column names
+        dtypes:
+          type: object
+          additionalProperties:
+            type: string
+          description: Column data types
+        error:
+          type: string
+          description: Error message if query failed
+        execution_time:
+          type: number
+          description: Execution time in milliseconds
+        figure_id:
+          type: string
+          description: Figure ID if chart available
+
+    PlotlyFigureResponse:
+      type: object
+      properties:
+        type:
+          type: string
+          example: "plotly_figure"
+        id:
+          type: string
+        fig:
+          type: object
+          properties:
+            data:
+              type: array
+              items:
+                type: object
+            layout:
+              type: object
+            config:
+              type: object
+
+    LLMConfig:
+      type: object
+      properties:
+        endpoint:
+          type: string
+          format: uri
+          example: "http://127.0.0.1:8765"
+        api_key:
+          type: string
+          description: Optional auth token
+        model:
+          type: string
+          example: "copilot/gpt-5-mini"
+        temperature:
+          type: number
+          minimum: 0
+          maximum: 1
+          example: 0.5
+        max_tokens:
+          type: integer
+          example: 50000
+        max_tool_rounds:
+          type: integer
+          example: 20
+        timeout:
+          type: integer
+          example: 30
+
+    DatabaseConfig:
+      type: object
+      required:
+        - type
+        - host
+        - port
+        - database
+        - schema
+        - user
+        - password
+      properties:
+        type:
+          type: string
+          enum: [oracle, postgres, mysql, mssql]
+        host:
+          type: string
+          example: "localhost"
+        port:
+          type: integer
+          example: 1521
+        database:
+          type: string
+          example: "XEPDB1"
+        schema:
+          type: string
+          example: "hr"
+        user:
+          type: string
+          example: "hr"
+        password:
+          type: string
+          format: password
+          example: "hr123"
+
+    ChromaDBConfig:
+      type: object
+      properties:
+        n_results_sql:
+          type: integer
+          example: 10
+        n_results_ddl:
+          type: integer
+          example: 10
+        n_results_documentation:
+          type: integer
+          example: 10
+        persist_directory:
+          type: string
+          example: "./chromadb"
+
+    FlaskConfig:
+      type: object
+      properties:
+        host:
+          type: string
+          example: "0.0.0.0"
+        port:
+          type: integer
+          example: 8084
+        debug:
+          type: boolean
+          example: false
+        title:
+          type: string
+          example: "MyDBAssistant"
+        subtitle:
+          type: string
+          example: "Powered by Vanna AI"
+        allow_llm_to_see_data:
+          type: boolean
+          example: false
+
+    TrainingConfig:
+      type: object
+      properties:
+        auto_train_on_startup:
+          type: boolean
+          example: false
+        training_data_path:
+          type: string
+          example: "../trainingMyDb"
+        training_settings:
+          type: object
+          properties:
+            load_ddl:
+              type: boolean
+            load_documentation:
+              type: boolean
+            load_training_pairs:
+              type: boolean
+            skip_if_exists:
+              type: boolean
+            verbose:
+              type: boolean
+
+    AllConfigResponse:
+      type: object
+      properties:
+        llm:
+          $ref: '#/components/schemas/LLMConfig'
+        database:
+          $ref: '#/components/schemas/DatabaseConfig'
+        chromadb:
+          $ref: '#/components/schemas/ChromaDBConfig'
+        flask:
+          $ref: '#/components/schemas/FlaskConfig'
+        training:
+          $ref: '#/components/schemas/TrainingConfig'
+
+    UpdateConfigResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Configuration updated successfully"
+        config:
+          type: object
+
+    ConnectionTestResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        response_time:
+          type: number
+          description: Response time in milliseconds
+
+    TrainingDataLoadResponse:
+      type: object
+      properties:
+        ddl_loaded:
+          type: integer
+          description: Number of DDL files loaded
+        docs_loaded:
+          type: integer
+          description: Number of documentation files loaded
+        pairs_loaded:
+          type: integer
+          description: Number of Q&A pairs loaded
+        errors:
+          type: array
+          items:
+            type: string
+        message:
+          type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+        details:
+          type: object

@@ -1,13 +1,19 @@
 # Vanna AI Coding Agent Instructions
 
 ## Project Overview
-Vanna is an MIT-licensed RAG (Retrieval-Augmented Generation) framework for SQL generation. It uses LLMs and vector databases to convert natural language questions into SQL queries.
+Vanna is an MIT-licensed RAG (Retrieval-Augmented Generation) framework for SQL generation. It uses LLMs and vector databases to convert natural language questions into SQL queries, with automatic chart generation via Plotly.
 
 **Repository Structure:**
 - `src/vanna/` - Core Vanna framework (multiple inheritance architecture)
-- `src/myDbAssistant/` - Custom implementation with Umbrella Gateway + multi-database support (Oracle, PostgreSQL, MySQL, SQL Server)
+- `src/myDbAssistant/` - Custom implementation with Copilot Socket Core (GitHub Copilot via VS Code extension) + multi-database support
 - `tests/` - Framework tests
 - `training_data/` - Example training datasets
+
+**Key Entry Points:**
+- `src/vanna/base/base.py` - Core VannaBase class with ~2100 lines of framework logic
+- `src/myDbAssistant/quick_start_flask_ui.py` - Production Flask app with custom LLM, settings UI, and branding
+- `src/myDbAssistant/config_ui.py` - Web-based configuration management (/settings endpoint)
+- `src/myDbAssistant/ui/config_loader.py` - JSON-based configuration system
 
 ## Core Architecture
 
@@ -213,6 +219,48 @@ If LLM response contains `intermediate_sql` comment, Vanna:
 3. Requires `allow_llm_to_see_data=True` flag for security
 
 ## Flask UI & Visualization
+
+### Chart Generation Workflow (Critical for AI Agents)
+Vanna generates interactive Plotly charts through a **3-step pipeline**:
+
+**1. Backend: Code Generation** (`src/vanna/base/base.py:735-756`)
+```python
+def generate_plotly_code(self, question: str, sql: str, df_metadata: str) -> str:
+    # LLM generates Python plotly code from DataFrame.dtypes
+    # Returns: "fig = px.bar(df, x='name', y='value')"
+```
+
+**2. Backend: Code Execution** (`src/vanna/base/base.py:2068-2119`)
+```python
+def get_plotly_figure(self, plotly_code: str, df: pd.DataFrame) -> plotly.graph_objs.Figure:
+    ldict = {"df": df, "px": px, "go": go}
+    exec(plotly_code, globals(), ldict)  # Execute LLM-generated code
+    fig = ldict.get("fig", None)
+    
+    # Fallback logic if exec fails:
+    if len(numeric_cols) >= 2:
+        fig = px.scatter(df, x=numeric_cols[0], y=numeric_cols[1])
+    elif len(numeric_cols) == 1 and len(categorical_cols) >= 1:
+        fig = px.bar(df, x=categorical_cols[0], y=numeric_cols[0])
+    # ... more fallbacks
+```
+
+**3. Frontend: Rendering** (`src/vanna/flask/assets.py`)
+```javascript
+// Frontend uses Plotly.js
+Plotly.newPlot(document.getElementById(containerId), figJSON, {responsive: true});
+```
+
+**Flask API Endpoints** (`src/vanna/flask/__init__.py:651-706`):
+- `GET /api/v0/generate_plotly_figure` - Generates chart from cached SQL result
+- Returns: `{"type": "plotly_figure", "id": "...", "fig": <JSON>}`
+- Chart generation only if `should_generate_chart(df)` returns True (>1 row + numeric columns)
+
+**Key Pattern:**
+- LLM generates code string (not executed by LLM)
+- Vanna executes code in sandboxed environment with `exec()`
+- Frontend receives serialized Plotly figure JSON
+- Never edit `src/vanna/flask/assets.py` - it's auto-generated
 
 ### Flask App (`src/vanna/flask/`)
 - `assets.py` - Contains embedded HTML/CSS/JS (auto-generated, don't edit manually)
@@ -605,24 +653,24 @@ Verify:
 
 ### Overview
 `src/myDbAssistant/` is a production-ready example using:
-- **Umbrella Gateway** - GitHub Copilot API access via VS Code extension (custom LLM)
+- **Copilot Socket Core** - GitHub Copilot API access via VS Code extension (custom LLM implementation)
 - **Multi-Database Support** - Oracle, PostgreSQL, MySQL, Microsoft SQL Server
-- **JSON Configuration** - Flexible, file-based configuration system
-- **Training Control** - Manual vs automatic training modes
+- **JSON Configuration** - Flexible, file-based configuration system with web-based settings UI
+- **Training Control** - Smart training with manual/automatic modes and duplicate detection
 
-**Key difference from core Vanna:** Implements custom LLM provider (Umbrella Gateway) instead of standard providers like OpenAI/Anthropic, with flexible database configuration.
+**Key difference from core Vanna:** Implements custom LLM provider (Copilot Socket Core) instead of standard providers like OpenAI/Anthropic, with comprehensive settings UI and multi-database configuration.
 
 ### Directory Structure
 ```
 src/myDbAssistant/
 ├── ui/                          # JSON-based configuration system
 │   ├── config/
-│   │   ├── llm.json            # Umbrella Gateway settings
-│   │   ├── database.json       # Oracle connection params
-│   │   ├── flask.json          # Web UI settings
-│   │   ├── chromadb.json       # Vector store settings
-│   │   └── training.json       # Training control (NEW)
-│   ├── config_loader.py        # Configuration utilities
+│   │   ├── llm.json            # Copilot Socket Core settings (auth token, port, model)
+│   │   ├── database.json       # Database connection params (type, host, port, credentials)
+│   │   ├── flask.json          # Web UI settings (host, port, title, data visibility)
+│   │   ├── chromadb.json       # Vector store settings (n_results_*, persist dir)
+│   │   └── training.json       # Training control (auto_train, data paths, load options)
+│   ├── config_loader.py        # Configuration utilities (JSON read/write)
 │   └── __init__.py             # Exports: get_vanna_config, should_auto_train, train_from_files
 │
 ├── trainingMyDb/               # Training data (separate from config)
@@ -630,9 +678,10 @@ src/myDbAssistant/
 │   ├── documentation/          # Business rules (Markdown)
 │   └── trainingpairs/          # Q&A examples (JSON)
 │
-├── quick_start_flask_ui.py    # Main application (uses JSON config)
+├── quick_start_flask_ui.py    # Main application (uses JSON config, smart training)
+├── config_ui.py               # Web-based settings UI at /settings (NEW!)
 ├── quick_start_flask.py       # Alternative (uses config.py)
-├── config.py                   # Python-based config (legacy)
+├── config.py                  # Python-based config (legacy)
 └── test_ui_config.py          # Configuration test suite
 ```
 
@@ -642,23 +691,26 @@ src/myDbAssistant/
 ```python
 from vanna.base import VannaBase
 from vanna.chromadb import ChromaDB_VectorStore
+import requests
 
 class MyCustomLLM(VannaBase):
     def __init__(self, config_dict=None):
         VannaBase.__init__(self, config=config_dict)
-        # Umbrella Gateway-specific initialization
-        self.api_endpoint = config_dict.get('endpoint', 'http://localhost:8765')
+        # Copilot Socket Core-specific initialization
+        self.api_key = config_dict.get('api_key')  # Auth token from VS Code
+        self.api_endpoint = config_dict.get('endpoint', 'http://127.0.0.1:8765')
         self.session_id = f"vanna_session_{int(time.time())}"
     
     def submit_prompt(self, prompt, **kwargs) -> str:
-        # POST to Umbrella Gateway /chat endpoint
+        # POST to Copilot Socket Core /chat endpoint
         payload = {
             "messages": prompt,
             "sessionId": self.session_id,
             "model": self.model,
             "stream": False
         }
-        # Return response text
+        response = requests.post(f"{self.api_endpoint}/chat", json=payload)
+        return response.json()['choices'][0]['message']['content']
 
 # Multiple inheritance: VectorStore FIRST, then LLM
 class MyVanna(ChromaDB_VectorStore, MyCustomLLM):
@@ -667,7 +719,7 @@ class MyVanna(ChromaDB_VectorStore, MyCustomLLM):
         MyCustomLLM.__init__(self, config_dict=config_dict)
 ```
 
-**Critical:** Session IDs allow Umbrella Gateway to maintain conversation context.
+**Critical:** Session IDs allow Copilot Socket Core to maintain conversation context across multiple prompts.
 
 ### JSON Configuration System
 
@@ -782,45 +834,6 @@ pip install 'vanna[mssql]'     # For SQL Server
 
 **Note:** Use quotes around `'vanna[...]'` to avoid shell interpretation issues (especially in zsh).
 
-### Training Control System (NEW)
-
-**Problem:** Original implementation always trained on startup → slow restarts, duplicate training.
-
-**Solution:** `ui/config/training.json` controls when/how training happens:
-
-```json
-{
-  "auto_train_on_startup": false,  // Manual control by default
-  "training_data_path": "../trainingMyDb",
-  "training_settings": {
-    "load_ddl": true,
-    "load_documentation": true,
-    "load_training_pairs": true,
-    "skip_if_exists": true,         // Skip if already trained
-    "verbose": true
-  }
-}
-```
-
-**Usage patterns:**
-```python
-# Check if auto-training enabled
-if should_auto_train():
-    stats = train_from_files(vn, verbose=True)
-    print(f"Loaded {stats['pairs_loaded']} training pairs")
-else:
-    print("⏸️ Auto-training disabled - train manually when needed")
-
-# Manual training anytime
-stats = train_from_files(vn)  # Returns {ddl_loaded, docs_loaded, pairs_loaded, errors}
-```
-
-**Why disable auto-training:**
-- Faster startup (no training delay)
-- Control when training happens
-- Avoid re-training on every restart
-- Better for production (train once, reuse ChromaDB)
-
 ### Settings UI (NEW!)
 
 **Location:** `src/myDbAssistant/config_ui.py`
@@ -828,7 +841,7 @@ stats = train_from_files(vn)  # Returns {ddl_loaded, docs_loaded, pairs_loaded, 
 A comprehensive web-based configuration interface accessible at `http://localhost:8084/settings`.
 
 **Features:**
-- **🤖 LLM Settings** - Configure Umbrella Gateway (API key, endpoint, model, temperature, max tokens, timeout)
+- **🤖 LLM Settings** - Configure Copilot Socket Core (API key, endpoint, model, temperature, max tokens, timeout)
 - **🗄️ Database Settings** - Manage database connections (type, host, port, credentials) with connection testing
 - **📊 ChromaDB Settings** - Adjust vector store retrieval parameters (SQL/DDL/documentation result counts)
 - **🌐 Flask Settings** - Configure web server (host, port, debug mode, UI title/subtitle, data visibility)
@@ -845,6 +858,7 @@ A comprehensive web-based configuration interface accessible at `http://localhos
    - `POST /api/v0/update_training_config` - Update training settings
    - `POST /api/v0/test_database_connection` - Test database connectivity
    - `POST /api/v0/test_llm_connection` - Test LLM endpoint health
+   - `POST /api/v0/load_training_data` - Manual training data load (NEW!)
 
 2. **ConfigLoader Integration** (uses existing `ui/config_loader.py`):
    ```python
@@ -876,6 +890,7 @@ A comprehensive web-based configuration interface accessible at `http://localhos
 - Auto-fills default ports based on database type
 - Visual feedback (success/error alerts)
 - Responsive design with modern styling
+- Manual training data load button (with smart duplicate detection)
 
 **Security Notes:**
 - No built-in authentication (add for production)
@@ -885,12 +900,65 @@ A comprehensive web-based configuration interface accessible at `http://localhos
 
 See `docs/settings-ui-guide.md` for comprehensive usage guide.
 
-### Umbrella Gateway Integration
+### Training Control System
+
+**Problem:** Original implementation always trained on startup → slow restarts, duplicate training.
+
+**Solution:** `ui/config/training.json` controls when/how training happens:
+
+```json
+{
+  "auto_train_on_startup": false,  // Manual control by default
+  "training_data_path": "../trainingMyDb",
+  "training_settings": {
+    "load_ddl": true,
+    "load_documentation": true,
+    "load_training_pairs": true,
+    "skip_if_exists": true,         // Skip if already trained
+    "verbose": true
+  }
+}
+```
+
+**Smart Training Implementation** (`quick_start_flask_ui.py`):
+```python
+# Check if training data already exists in ChromaDB
+existing_data = vn.get_training_data()
+if existing_data and len(existing_data) > 0:
+    print(f"✅ Training data already exists ({len(existing_data)} items)")
+    print("   Skipping training data load to avoid duplicates.")
+else:
+    print("📚 No training data found, loading from files...")
+    if should_auto_train():
+        stats = train_from_files(vn, verbose=True)
+        print(f"Loaded {stats['pairs_loaded']} training pairs")
+```
+
+**Usage patterns:**
+```python
+# Check if auto-training enabled
+if should_auto_train():
+    stats = train_from_files(vn, verbose=True)
+    print(f"Loaded {stats['pairs_loaded']} training pairs")
+else:
+    print("⏸️ Auto-training disabled - train manually when needed")
+
+# Manual training anytime via settings UI
+# POST /api/v0/load_training_data
+```
+
+**Why disable auto-training:**
+- Faster startup (no training delay)
+- Control when training happens
+- Avoid re-training on every restart
+- Better for production (train once, reuse ChromaDB)
+
+### Copilot Socket Core Integration
 
 **Prerequisites:**
-1. VS Code with Umbrella Gateway extension installed
+1. VS Code with Copilot Socket Core extension installed
 2. GitHub Copilot subscription
-3. Server started: `Cmd+Shift+P` → "Umbrella Gateway: Start Server"
+3. Server started: `Cmd+Shift+P` → "Copilot Socket Core: Start Server"
 
 **Getting auth token:**
 ```bash
@@ -899,10 +967,23 @@ cat .vscode/settings.json | grep authToken
 ```
 
 **Available models:**
-- `copilot/gpt-5-mini` (fast, cheap)
+- `copilot/gpt-5-mini` (fast, cheap) - **DEFAULT**
 - `copilot/gpt-5` (balanced)
 - `copilot/claude-sonnet-4` (powerful)
 - `copilot/o1-mini` (reasoning)
+
+**Configuration** (`ui/config/llm.json`):
+```json
+{
+  "api_key": "your-auth-token-from-vscode",
+  "endpoint": "http://127.0.0.1:8765",
+  "model": "copilot/gpt-5-mini",
+  "temperature": 0.5,
+  "max_tokens": 50000,
+  "timeout": 30,
+  "max_rounds": 20
+}
+```
 
 **Error handling:**
 - 401 → Check auth token in `llm.json`
@@ -962,12 +1043,24 @@ python quick_start_flask_ui.py
 **4. Error messages must guide users:**
 ```python
 except requests.exceptions.ConnectionError:
-    print(f"❌ Connection Error: Cannot reach Umbrella Gateway")
+    print(f"❌ Connection Error: Cannot reach Copilot Socket Core")
     print(f"   Make sure:")
     print(f"   1. VS Code is open with the workspace")
-    print(f"   2. Umbrella Gateway extension is installed")
-    print(f"   3. Server is started (Cmd+Shift+P -> 'Umbrella Gateway: Start Server')")
+    print(f"   2. Copilot Socket Core extension is installed")
+    print(f"   3. Server is started (Cmd+Shift+P -> 'Copilot Socket Core: Start Server')")
 ```
+
+### Adding New Custom LLM Providers
+
+To add another custom LLM (like Copilot Socket Core):
+
+1. Create LLM class inheriting from `VannaBase`
+2. Implement required methods: `submit_prompt()`, `system_message()`, `user_message()`, `assistant_message()`
+3. Add provider-specific config to `ui/config/llm.json`
+4. Update `config_loader.py` if needed
+5. Follow multiple inheritance pattern: `class MyVanna(VectorStore, CustomLLM)`
+
+**See `quick_start_flask_ui.py` lines 28-107** for complete example.
 
 ### Adding New Custom LLM Providers
 
