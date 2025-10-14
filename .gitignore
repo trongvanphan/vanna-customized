@@ -25,3 +25,5 @@ milvus.db
 # Spec-kit security: prevent credential leakage
 .github/prompts/.env
 .specify/memory/
+/ui-nextjs/node_modules
+/ui-nextjs/.next
